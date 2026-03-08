@@ -1,7 +1,7 @@
 import streamlit as st
 from fpdf import FPDF
 
-# 1. CONFIGURAÇÃO E DADOS (Mantendo suas fórmulas originais)
+# 1. CONFIGURAÇÃO E DADOS TÉCNICOS
 st.set_page_config(page_title="Hugo Letra Caixa PRO", layout="wide")
 
 BASE_REGIONAL = {
@@ -34,7 +34,7 @@ if senha == "HUGO2026":
     with col1:
         nome_cliente = st.text_input("Nome do Cliente", "CLIENTE EXECUTIVO")
         with st.expander("📝 DIMENSÕES E TEXTO", expanded=True):
-            texto = st.text_input("Texto do Letreiro", "HUGO SANTOS").upper()
+            texto = st.text_input("Texto do Letreiro", "TEXTO").upper()
             qtd_letras = len(texto.replace(" ", ""))
             c1, c2, c3 = st.columns(3)
             h, w, p = c1.number_input("Altura (cm)", 30), c2.number_input("Largura (cm)", 32), c3.number_input("Profundidade (cm)", 5)
@@ -42,13 +42,16 @@ if senha == "HUGO2026":
         with st.expander("🏗️ MATERIAIS", expanded=True):
             m1, m2 = st.columns(2)
             face_opts = {"Nenhum": 0, "Acrílico 2mm": 15, "Acrílico 3mm": 25, "Policarbonato 2mm": 35, "Policarbonato 3mm": 45}
-            v_face_base = face_opts[m1.selectbox("Material da Face", list(face_opts.keys()), index=3)]
+            face_sel = m1.selectbox("Material da Face", list(face_opts.keys()), index=3)
+            v_face_base = face_opts[face_sel]
             
             fundo_opts = {"Sem Fundo": 0, "PVC 5mm": 15, "PVC 10mm": 25, "Impressão 3D": 12, "ACM 3mm": 30}
-            v_fundo_base = fundo_opts[m2.selectbox("Material do Fundo", list(fundo_opts.keys()), index=1)]
+            fundo_sel = m2.selectbox("Material do Fundo", list(fundo_opts.keys()), index=1)
+            v_fundo_base = fundo_opts[fundo_sel]
             
-            led_opts = {"Sem LED": 0, "Branco Frio/Quente": 45, "RGB Colorido": 75}
-            v_led = led_opts[st.selectbox("Iluminação LED", list(led_opts.keys()))]
+            led_opts = {"Sem LED": 0, "LED Branco Frio / Quente": 45, "LED RGB (Colorido)": 75}
+            led_sel = st.selectbox("Iluminação LED", list(led_opts.keys()))
+            v_led = led_opts[led_sel]
 
         with st.expander("⚙️ CONFIGURAÇÃO TÉCNICA", expanded=True):
             estado = st.selectbox("Localização", list(BASE_REGIONAL.keys()))
@@ -57,47 +60,58 @@ if senha == "HUGO2026":
             maq_data = next(m for m in IMPRESSORAS[marca] if m['nome'] == modelo)
             kwh, mult_mat = BASE_REGIONAL[estado]
 
-    # 3. DETALHAMENTO DE VALOR
+    # 3. DETALHAMENTO E CÁLCULOS
     with col2:
-        st.subheader("💰 DETALHES DO ORÇAMENTO")
+        st.subheader("💰 DETALHAMENTO DE VALOR")
         
-        # Cálculos exatos do seu HTML
+        # Fórmulas extraídas do seu código original
         custo_face = v_face_base * mult_mat
         custo_fundo = v_fundo_base * mult_mat
-        custo_corpo = ((h*2) + (w*2)) * p * 0.17808 * maq_data['fator'] * (130 * mult_mat / 130)
+        custo_corpo = ((h*2) + (w*2)) * p * 0.17808 * maq_data['fator'] * (1.05) 
         custo_energia = ((h + w) / 10) * maq_data['fator'] * (maq_data['watts'] / 1000) * kwh
         
         total_unitario = custo_corpo + custo_face + custo_fundo + v_led
         total_projeto = total_unitario * qtd_letras
         
-        # Painel Visual de Custos
-        st.write(f"✅ **Corpo (Impressão 3D):** R$ {custo_corpo:,.2f}")
-        st.write(f"✅ **Face (Corte):** R$ {custo_face:,.2f}")
-        st.write(f"✅ **Fundo (Base):** R$ {custo_fundo:,.2f}")
+        # Exibição detalhada no painel
+        st.write(f"✅ **Corpo (3D):** R$ {custo_corpo:,.2f}")
+        st.write(f"✅ **Face:** R$ {custo_face:,.2f}")
+        st.write(f"✅ **Fundo:** R$ {custo_fundo:,.2f}")
         st.write(f"✅ **Iluminação:** R$ {v_led:,.2f}")
+        st.write(f"✅ **Energia:** R$ {custo_energia:,.2f}")
         
         st.divider()
         st.metric("VALOR TOTAL", f"R$ {total_projeto:,.2f}")
         st.metric("UNITÁRIO", f"R$ {total_unitario:,.2f}")
 
-        # GERAÇÃO DO PDF
-        if st.button("📄 GERAR ARQUIVO PDF"):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(190, 10, "ORÇAMENTO - HUGO LETRA CAIXA PRO", ln=True, align='C')
-            pdf.ln(10)
-            pdf.set_font("Arial", '', 12)
-            pdf.cell(190, 10, f"Cliente: {nome_cliente}", ln=True)
-            pdf.cell(190, 10, f"Projeto: {texto} ({qtd_letras} letras)", ln=True)
-            pdf.cell(190, 10, f"Dimensoes: {h}cm x {w}cm x {p}cm", ln=True)
-            pdf.ln(5)
-            pdf.cell(190, 10, f"VALOR UNITARIO: R$ {total_unitario:,.2f}", ln=True)
-            pdf.set_font("Arial", 'B', 14)
-            pdf.cell(190, 10, f"TOTAL DO PROJETO: R$ {total_projeto:,.2f}", ln=True)
-            
-            pdf_output = pdf.output(dest='S').encode('latin-1')
-            st.download_button(label="📥 CLIQUE PARA BAIXAR PDF", data=pdf_output, file_name=f"Orcamento_{texto}.pdf", mime="application/pdf")
+        # GERAÇÃO DO PDF AO CLICAR
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(190, 10, "ORCAMENTO - HUGO LETRA CAIXA PRO", ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(190, 10, f"Cliente: {nome_cliente}", ln=True)
+        pdf.cell(190, 10, f"Projeto: {texto} ({qtd_letras} letras)", ln=True)
+        pdf.cell(190, 10, f"Dimensoes: {h}cm x {w}cm x {p}cm", ln=True)
+        pdf.ln(5)
+        pdf.cell(190, 10, "DETALHAMENTO:", ln=True)
+        pdf.cell(190, 10, f"- Face: {face_sel}", ln=True)
+        pdf.cell(190, 10, f"- Fundo: {fundo_sel}", ln=True)
+        pdf.cell(190, 10, f"- LED: {led_sel}", ln=True)
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(190, 10, f"VALOR UNITARIO: R$ {total_unitario:,.2f}", ln=True)
+        pdf.cell(190, 10, f"TOTAL DO PROJETO: R$ {total_projeto:,.2f}", ln=True)
+        
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        
+        st.download_button(
+            label="📥 BAIXAR PDF DO ORÇAMENTO",
+            data=pdf_bytes,
+            file_name=f"Orcamento_{nome_cliente}.pdf",
+            mime="application/pdf"
+        )
 
 else:
     st.warning("⚠️ Insira a chave de acesso na barra lateral.")
