@@ -3,7 +3,7 @@ import streamlit as st
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="SPP - Precificação Pro", layout="wide")
 
-# 2. BANCOS DE DADOS COMPLETOS
+# 2. BANCOS DE DADOS COMPLETOS (Ficheiro Original)
 BASE_REGIONAL = {
     "BA - Coelba": [0.92, 1.05], "SP - Enel": [0.84, 1.00], "RJ - Light": [0.98, 1.02],
     "MG - Cemig": [0.91, 1.00], "PR - Copel": [0.78, 0.98], "RS - Equatorial": [0.88, 1.03],
@@ -56,21 +56,22 @@ if senha == "HUGO2026":
 
         with st.expander("🏗️ MATERIAIS E COMPONENTES", expanded=True):
             f1, f2 = st.columns(2)
-            # Material da Face
+            # Corrigindo os dicionários para o cálculo não falhar
             face_opcoes = {"Nenhum": 0, "Acrílico 2mm": 15, "Acrílico 3mm": 25, "Policarbonato 2mm": 35, "Policarbonato 3mm": 45}
-            face_sel = f1.selectbox("Material da Face", list(face_opcoes.keys()), index=3)
+            face_nome = f1.selectbox("Material da Face", list(face_opcoes.keys()), index=3)
+            v_face_base = face_opcoes[face_nome]
             
-            # Cor da Face
             cor_opcoes = {"Branca (Padrão)": 0, "Colorida (+R$20)": 20}
-            cor_sel = f2.selectbox("Cor da Face", list(cor_opcoes.keys()))
+            cor_nome = f2.selectbox("Cor da Face", list(cor_opcoes.keys()))
+            v_cor = cor_opcoes[cor_nome]
             
-            # Material do Fundo
             fundo_opcoes = {"Sem Fundo": 0, "PVC 5mm": 15, "PVC 10mm": 25, "Impressão 3D": 12, "ACM 3mm": 30}
-            fundo_sel = st.selectbox("Material do Fundo (Base)", list(fundo_opcoes.keys()), index=1)
+            fundo_nome = st.selectbox("Material do Fundo (Base)", list(fundo_opcoes.keys()), index=1)
+            v_fundo_base = fundo_opcoes[fundo_nome]
             
-            # Iluminação
             led_opcoes = {"Sem LED": 0, "Branco Frio/Quente": 45, "RGB Colorido": 75}
-            led_sel = st.selectbox("Iluminação LED", list(led_opcoes.keys()))
+            led_nome = st.selectbox("Iluminação LED", list(led_opcoes.keys()))
+            v_led = led_opcoes[led_nome]
 
         with st.expander("⚙️ CONFIGURAÇÃO TÉCNICA", expanded=True):
             est_col, imp_col = st.columns(2)
@@ -78,37 +79,31 @@ if senha == "HUGO2026":
             marca = imp_col.selectbox("Marca", list(IMPRESSORAS.keys()))
             modelo = st.selectbox("Modelo", [m['nome'] for m in IMPRESSORAS[marca]])
             
-            # Material do Corpo
             corpo_opcoes = {"PETG UV (Externo)": 130, "PLA (Interno)": 100}
-            corpo_sel = st.selectbox("Material do Corpo", list(corpo_opcoes.keys()))
+            corpo_nome = st.selectbox("Material do Corpo", list(corpo_opcoes.keys()))
+            v_corpo_base = corpo_opcoes[corpo_nome]
 
         with st.expander("👥 PERFIL DE CLIENTE", expanded=True):
             perfil = st.radio("Tipo de Venda", ["Cliente Final (100%)", "Terceirização (80%)"], horizontal=True)
             ajuste = st.slider("Ajuste Manual (%)", -50, 100, 0)
 
-    # 4. LÓGICA DE CÁLCULO (EXATA DO ORIGINAL)
+    # 4. LÓGICA DE CÁLCULO
     with col2:
         st.subheader("💰 ORÇAMENTO")
         
-        # Recuperar dados técnicos
         maq_data = next(m for m in IMPRESSORAS[marca] if m['nome'] == modelo)
         kwh, mult_mat = BASE_REGIONAL[estado]
         
-        # Valores dos itens selecionados
-        v_face = face_opcoes[face_sel] * mult_mat
-        v_cor = cor_opcoes[cor_sel]
-        v_fundo = fundo_opcoes[fundo_sel] * mult_mat
-        v_led = led_opcoes[led_sel]
-        v_mat_corpo = corpo_sel * mult_mat
+        # Agora as multiplicações funcionam porque v_xxx são números
+        v_face = v_face_base * mult_mat
+        v_fundo = v_fundo_base * mult_mat
+        v_mat_corpo = v_corpo_base * mult_mat
         
-        # Cálculo do Corpo e Energia
         preco_corpo = ((h*2) + (w*2)) * p * 0.17808 * maq_data['fator'] * (v_mat_corpo / 130)
         energia = ((h + w) / 10) * maq_data['fator'] * (maq_data['watts'] / 1000) * kwh
         
-        # Valor Unitário Base
         valor_unit = preco_corpo + v_face + v_fundo + v_led + v_cor + energia
         
-        # Aplicar Perfil e Ajuste
         fator_perfil = 0.8 if "Terceirização" in perfil else 1.0
         valor_unit = valor_unit * fator_perfil * (1 + (ajuste / 100))
         
@@ -120,7 +115,7 @@ if senha == "HUGO2026":
         st.info(f"Quantidade: {qtd_letras} letras")
         
         if st.button("🖨️ IMPRIMIR ORÇAMENTO"):
-            st.write("Dica: Use o atalho Ctrl+P no navegador para salvar em PDF.")
+            st.write("Use Ctrl+P para salvar em PDF.")
 
 else:
     st.warning("⚠️ Insira a Chave de Acesso na barra lateral.")
