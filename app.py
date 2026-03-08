@@ -1,4 +1,4 @@
-import streamlit as stimport streamlit as st
+import streamlit as st
 
 # 1. CONFIGURAÇÃO DA PÁGINA (ESTILO PROFISSIONAL)
 st.set_page_config(page_title="SPP - Precificação Pro", layout="wide")
