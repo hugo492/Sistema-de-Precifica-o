@@ -1,87 +1,99 @@
 import streamlit as st
-from fpdf import FPDF
 
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO E ESTILO NEON (DARK MODE)
 st.set_page_config(page_title="SPP - SISTEMA DE PRECIFICAÇÃO PRO", layout="wide")
 
-# 2. BANCOS DE DADOS (VALORES TÉCNICOS)
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: #00ffcc; }
+    .stMetric { background-color: #1a1c23; border: 1px solid #00ffcc; padding: 15px; border-radius: 10px; }
+    div[data-testid="stExpander"] { background-color: #1a1c23; border: 1px solid #00ffcc; color: white; }
+    h1, h2, h3 { color: #00ffcc !important; text-shadow: 0 0 10px #00ffcc; }
+    .stButton>button { background-color: #00ffcc; color: black; font-weight: bold; border-radius: 5px; width: 100%; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. BANCOS DE DADOS (Seu código original)
 BASE_REGIONAL = {
     "BA - Coelba": [0.92, 1.05], "SP - Enel": [0.84, 1.00], "RJ - Light": [0.98, 1.02],
-    "MG - Cemig": [0.91, 1.00], "PR - Copel": [0.78, 0.98], "SC - Celesc": [0.76, 0.98]
+    "MG - Cemig": [0.91, 1.00], "PR - Copel": [0.78, 0.98], "RS - Equatorial": [0.88, 1.03],
+    "SC - Celesc": [0.76, 0.98], "PE - Neoenergia": [0.89, 1.08], "CE - Enel": [0.94, 1.10],
+    "GO - Equatorial": [0.85, 1.02], "MT - Energisa": [0.96, 1.12], "AM - Amazonas": [1.02, 1.25],
+    "PA - Equatorial": [1.05, 1.20], "DF - Neoenergia": [0.82, 1.05], "ES - EDP": [0.86, 1.01]
 }
 
-# MAPAS DE PREÇO (Isso impede o erro TypeError)
-FACE_PRECOS = {"Acrílico 2mm": 15, "Acrílico 3mm": 25, "Policarbonato 2mm": 35, "Policarbonato 3mm": 45}
-FUNDO_PRECOS = {"PVC 5mm": 15, "PVC 10mm": 25, "ACM 3mm": 30, "Impressão 3D": 12}
-CORPO_PRECOS = {"PETG UV (Externo)": 130, "PLA (Interno)": 100}
+IMPRESSORAS = {
+    "Anycubic": [
+        {"nome": "Kobra 2 Max", "fator": 1.0, "watts": 500},
+        {"nome": "Kobra 3 Max", "fator": 0.95, "watts": 550},
+        {"nome": "Kobra 2 Plus", "fator": 1.05, "watts": 450}
+    ],
+    "Creality": [{"nome": "K1 Max", "fator": 0.9, "watts": 1000}],
+    "Bambu Lab": [{"nome": "X1-Carbon", "fator": 0.85, "watts": 350}]
+}
 
 # 3. ACESSO
-senha = st.sidebar.text_input("CHAVE DE ACESSO MENSAL", type="password")
+st.sidebar.title("🔐 Acesso Hugo Pro")
+senha = st.sidebar.text_input("Chave Mensal", type="password")
 
 if senha == "HUGO2026":
     st.title("🚀 SPP - SISTEMA DE PRECIFICAÇÃO PRO")
     
-    col1, col2 = st.columns([1.5, 1])
+    col1, col2 = st.columns([2, 1.2])
 
     with col1:
-        nome_cli = st.text_input("NOME DO CLIENTE", "CLIENTE").upper()
-        
-        with st.expander("📝 DIMENSÕES E TEXTO", expanded=True):
-            texto_p = st.text_input("TEXTO DO LETREIRO", "EXEMPLO").upper()
-            qtd_l = len(texto_p.replace(" ", ""))
+        with st.expander("📝 TEXTO E DIMENSÕES", expanded=True):
+            texto = st.text_input("Texto do Letreiro", placeholder="Ex: HUGO SANTOS").upper()
+            qtd_letras = len(texto.replace(" ", ""))
             c1, c2, c3 = st.columns(3)
-            h = c1.number_input("ALTURA (cm)", value=30)
-            w = c2.number_input("LARGURA (cm)", value=32)
-            p = c3.number_input("PROFUNDIDADE (cm)", value=5)
+            h = c1.number_input("Altura (cm)", value=30)
+            w = c2.number_input("Largura (cm)", value=32)
+            p = c3.number_input("Profundidade (cm)", value=5)
 
-        with st.expander("🏗️ MATERIAIS", expanded=True):
-            f_sel = st.selectbox("MATERIAL DA FACE", list(FACE_PRECOS.keys()))
-            fun_sel = st.selectbox("MATERIAL DO FUNDO", list(FUNDO_PRECOS.keys()))
-            cor_sel = st.selectbox("MATERIAL DO CORPO", list(CORPO_PRECOS.keys()))
+        with st.expander("🏗️ MATERIAIS E COMPONENTES", expanded=True):
+            m1, m2 = st.columns(2)
+            face_dict = {"Nenhum": 0, "Acrílico 2mm": 15, "Acrílico 3mm": 25, "Policarbonato 2mm": 35, "Policarbonato 3mm": 45}
+            face_sel = m1.selectbox("Material da Face", list(face_dict.keys()), index=2)
+            
+            fundo_dict = {"Sem Fundo": 0, "PVC 5mm": 15, "PVC 10mm": 25, "Impressão 3D": 12, "ACM 3mm": 30}
+            fundo_sel = m2.selectbox("Material do Fundo", list(fundo_dict.keys()), index=1)
+            
+            led_dict = {"Sem LED": 0, "LED Branco": 45, "LED RGB": 75}
+            led_sel = st.selectbox("Iluminação LED", list(led_dict.keys()))
 
+        with st.expander("⚙️ TÉCNICO", expanded=True):
+            reg_col, imp_col = st.columns(2)
+            estado = reg_col.selectbox("Localização", list(BASE_REGIONAL.keys()))
+            marca = imp_col.selectbox("Marca", list(IMPRESSORAS.keys()))
+            modelo = st.selectbox("Modelo", [m['nome'] for m in IMPRESSORAS[marca]])
+            maq_data = next(m for m in IMPRESSORAS[marca] if m['nome'] == modelo)
+            kwh, mult_mat = BASE_REGIONAL[estado]
+
+    # 4. LÓGICA E DETALHAMENTO DE VALOR
     with col2:
-        st.subheader("💰 VALORES DETALHADOS")
+        st.subheader("💰 DETALHAMENTO")
         
-        estado = st.selectbox("LOCALIZAÇÃO", list(BASE_REGIONAL.keys()))
-        kwh, mult_mat = BASE_REGIONAL[estado]
+        # Valores individuais
+        custo_face = face_dict[face_sel] * mult_mat
+        custo_fundo = fundo_dict[fundo_sel] * mult_mat
+        custo_corpo = ((h*2) + (w*2)) * p * 0.17808 * maq_data['fator'] * (130 * mult_mat / 130)
         
-        # BUSCA DOS VALORES NUMÉRICOS (AQUI ESTÁ A CORREÇÃO)
-        v_face = FACE_PRECOS[f_sel] * mult_mat
-        v_fundo = FUNDO_PRECOS[fun_sel] * mult_mat
-        v_corpo_base = CORPO_PRECOS[cor_sel]
-        
-        # CÁLCULO DO CORPO (Fórmula original 0.17808)
-        custo_corpo = ((h*2) + (w*2)) * p * 0.17808 * (v_corpo_base * mult_mat / 130)
-        
-        unitario = custo_corpo + v_face + v_fundo
-        total_geral = unitario * qtd_l
+        v_unit = custo_corpo + custo_face + custo_fundo + led_dict[led_sel]
+        v_total = v_unit * qtd_letras
 
-        # PAINEL VISUAL
-        detalhe = st.container(border=True)
-        detalhe.write(f"🔹 **Corpo:** R$ {custo_corpo:,.2f}")
-        detalhe.write(f"🔹 **Face:** R$ {v_face:,.2f}")
-        detalhe.write(f"🔹 **Fundo:** R$ {v_fundo:,.2f}")
+        # Exibição detalhada
+        st.write(f"🟢 **Corpo (3D):** R$ {custo_corpo:,.2f}")
+        st.write(f"🟢 **Face:** R$ {custo_face:,.2f}")
+        st.write(f"🟢 **Fundo:** R$ {custo_fundo:,.2f}")
+        st.write(f"🟢 **LED:** R$ {led_dict[led_sel]:,.2f}")
         
         st.divider()
-        st.metric("VALOR TOTAL", f"R$ {total_geral:,.2f}")
-        st.write(f"**Unitário:** R$ {unitario:,.2f}")
+        st.metric("VALOR TOTAL", f"R$ {v_total:,.2f}")
+        st.write(f"**Unitário:** R$ {v_unit:,.2f}")
+        
+        st.divider()
+        if st.button("🖨️ Gerar Orçamento (PDF)"):
+            st.info("Pressione **Ctrl + P** para salvar como PDF profissional.")
 
-        # PDF SEM ACENTOS PARA NÃO TRAVAR
-        if st.button("📄 GERAR ORÇAMENTO EM PDF"):
-            try:
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(190, 10, "SPP - SISTEMA DE PRECIFICACAO PRO", ln=True, align='C')
-                pdf.ln(10)
-                pdf.set_font("Arial", '', 12)
-                pdf.cell(190, 10, f"CLIENTE: {nome_cli}", ln=True)
-                pdf.cell(190, 10, f"PROJETO: {texto_p}", ln=True)
-                pdf.cell(190, 10, f"VALOR TOTAL: R$ {total_geral:,.2f}", ln=True)
-                
-                pdf_output = pdf.output(dest='S').encode('latin-1', 'ignore')
-                st.download_button("📥 BAIXAR PDF", pdf_output, f"Orcamento_{nome_cli}.pdf", "application/pdf")
-            except:
-                st.error("Erro ao gerar PDF. Evite acentos nos campos.")
 else:
-    st.sidebar.warning("Aguardando Chave de Acesso.")
+    st.warning("⚠️ Insira a Chave na barra lateral.")
