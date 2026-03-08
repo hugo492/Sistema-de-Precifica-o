@@ -24,12 +24,6 @@ IMPRESSORAS = {
     },
     "Creality": {
         "K1 Max": [0.9, 1000], "Ender 3 V3": [1.1, 350], "CR-M4": [0.98, 800]
-    },
-    "Artillery": {
-        "Sidewinder X4 Plus": [0.98, 500], "Sidewinder X2": [1.15, 350]
-    },
-    "Prusa": {
-        "MK4": [0.9, 300], "XL": [0.85, 450]
     }
 }
 
@@ -40,11 +34,11 @@ if senha == "HUGO2026":
     st.title("🚀 SPP - SISTEMA DE PRECIFICAÇÃO PRO")
     st.info("💡 Corpo interno sempre em branco para melhor reflexão do LED.")
 
-    # --- SEQUÊNCIA PEDIDA: TEXTO > PREVIEW > ILUMINAÇÃO ---
-    texto_preview = st.text_input("Texto do Letreiro", value="HUGO SANTOS").upper()
+    # --- INÍCIO COM OPÇÕES PADRÃO: TEXTO LETREIRO E SEM LED ---
+    texto_preview = st.text_input("Texto do Letreiro", value="TEXTO LETREIRO").upper()
     qtd_letras = len(texto_preview.replace(" ", ""))
 
-    # CSS da Animação (Igual ao HTML)
+    # CSS da Animação
     st.markdown("""
     <style>
         @keyframes rgbCycle {
@@ -67,9 +61,9 @@ if senha == "HUGO2026":
     </style>
     """, unsafe_allow_html=True)
 
-    # Iluminação logo abaixo do texto
+    # Inicia com "Sem Iluminação" (index=0)
     led_dict = {"Sem Iluminação": 0, "LED Branco Frio / Quente": 45, "LED RGB (Colorido)": 75}
-    led_sel = st.selectbox("Iluminação LED", list(led_dict.keys()))
+    led_sel = st.selectbox("Iluminação LED", list(led_dict.keys()), index=0)
     v_led = led_dict[led_sel]
 
     classe_led = "led-rgb" if v_led == 75 else ("led-branco" if v_led == 45 else "")
@@ -81,7 +75,6 @@ if senha == "HUGO2026":
 
     st.divider()
 
-    # --- CAMPOS TÉCNICOS ---
     col1, col2 = st.columns([1.5, 1])
 
     with col1:
@@ -113,7 +106,7 @@ if senha == "HUGO2026":
         perfil = st.radio("Perfil de Cliente", ["Cliente Final (100%)", "Terceirização (80%)"], horizontal=True)
         ajuste_manual = st.number_input("Ajuste Manual (%)", value=0)
 
-        # --- LÓGICA DE CÁLCULO ---
+        # CÁLCULOS
         kwh, mult_m = BASE_REGIONAL[estado]
         fator, watts = IMPRESSORAS[marca][modelo]
         
@@ -135,9 +128,7 @@ if senha == "HUGO2026":
         st.write(f"**Unitário:** R$ {valor_unit:,.2f}/Un.")
         
         st.divider()
-        st.write(f"📊 **Resumo:** {qtd_letras} letras | {h}x{w}x{p} cm")
-        
         if st.button("🖨️ Salvar Orçamento em PDF"):
-            st.info("Pressione Ctrl + P para imprimir.")
+            st.info("Pressione Ctrl + P no navegador.")
 else:
-    st.sidebar.warning("Aguardando Chave de Assinante.")
+    st.sidebar.warning("Aguardando Chave Hugo Pro.")
